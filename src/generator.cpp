@@ -37,7 +37,7 @@ int main() {
   fs << n << "\n";
   for (int i = 0; i < n; i++) {
     int op = GenerateRandomNumber(10);
-    if (i <= n * 0.4 || (i > n * 0.8 & op <= 4)) {
+    if (i < n * 0.5) {
       fs << "insert ";
       string str = GenerateRandomString(3);
       int Int = GenerateRandomNumber(100);
@@ -55,9 +55,9 @@ int main() {
       fs << str << " ";
       fs << Int << "\n";
     }
-    else if (i <= n * 0.8 || op <= 7) {
+    else if (op <= 8) {
       fs << "delete ";
-      if (!str_list.empty() && GenerateRandomNumber(5) < 5) {
+      if (!str_list.empty() && GenerateRandomNumber(5) < 4) {
         auto it = str_list.begin() + GenerateRandomNumber(str_list.size());
         fs << it->first << " " << it->second << "\n";
         str_list.erase(it);
@@ -118,10 +118,6 @@ int main() {
           cout << an << " ";
         }
         cout << "\n";
-      }
-      if (index == "wSl") {
-        int stop;
-        stop = 0;
       }
     }
   }

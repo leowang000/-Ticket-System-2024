@@ -24,9 +24,9 @@ int main() {
   String<64> index;
   auto *tr = new BPlusTree<String<64>, int>("node_data", "node_trash", "leaf_data", "leaf_trash");
   cin >> n;
-  for (i = 0; i < n; ++i) {
+  for (i = 0; i < n; i++) {
     if (i % (n / 100) == 0) {
-      cout << i / (n / 100) << "%" << endl;
+      cout << i / (n / 100) << "%\n";
     }
     cin >> op;
     if (strcmp(op, "insert") == 0) {

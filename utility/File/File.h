@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <string>
 
+#include "LRU.h"
 #include "../STLite/set.h"
 #include "../STLite/vector.h"
 
@@ -103,7 +104,7 @@ template<class T, int len>
 class Storage {
  public:
   Storage(const std::string &data_file_name, const std::string &trash_file_name) :
-      data_file_(data_file_name), trash_file_(trash_file_name), pool_() {
+      data_file_(data_file_name), trash_file_(trash_file_name), pool_(), buffer(BufferPoolSize, this) {
     if (data_file_.IsCreated()) {
       last_id_ = (data_file_.FileSize() - len) / sizeof(T);
       trash_file_.OpenOrCreate();
@@ -128,6 +129,7 @@ class Storage {
   }
 
   ~Storage() {
+    buffer.Flush();
     trash_file_.OpenAndClear();
     int src[File::kBlockSize / sizeof(int)], cnt = 0;
     while (!pool_.empty()) {
@@ -145,11 +147,19 @@ class Storage {
   }
 
   void Read(T &dst, int id) {
+    if (buffer.Contain(id)) {
+      dst = buffer.Fetch(id);
+      return;
+    }
     data_file_.Read(dst, id);
+    buffer.Insert(id, dst);
   }
 
-  int Write(T &src, int id = 0) {
-    if (id == 0) {
+  int Write(T &src, int id = 0, bool write_to_file = false) {
+    if (buffer.Contain(id) && !write_to_file) {
+      buffer.Fetch(id) = src;
+    }
+    else if (id == 0) {
       if (pool_.empty()) {
         id = ++last_id_;
       }
@@ -157,13 +167,19 @@ class Storage {
         id = *pool_.begin();
         pool_.erase(pool_.begin());
       }
+      buffer.Insert(id, src);
     }
-    data_file_.Write(src, id);
+    else {
+      data_file_.Write(src, id);
+    }
     return id;
   }
 
   void Erase(int id) {
     pool_.insert(id);
+    if (buffer.Contain(id)) {
+      buffer.Erase(id);
+    }
   }
 
   void ReadInt(int &dst, int id) {
@@ -179,6 +195,8 @@ class Storage {
   }
 
  private:
+  static constexpr int BufferPoolSize = 1024;
+  LRU<T, len> buffer;
   FileWithInt<T, len> data_file_;
   FileWithInt<int> trash_file_;
   Set<int> pool_;
