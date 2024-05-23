@@ -3,8 +3,8 @@
 
 #include <string>
 
-#include "algorithm.h"
-#include "pair.h"
+#include "Algorithm.h"
+#include "Pair.h"
 
 namespace bubble {
 

@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-#include "algorithm.h"
+#include "Algorithm.h"
 #include "Pair.h"
 
 namespace bubble {
