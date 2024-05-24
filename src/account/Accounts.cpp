@@ -7,7 +7,7 @@ User::User(const username_t &username, const password_t &password, const name_t 
     username_(username), password_(password), name_(name), mail_(mail), privilege_(privilege) {}
 
 Order::Order(int time, const Order::Status &status, const train_id_t &train_id, const station_name_t &from,
-             const station_name_t &to, const Time &leave, const Time &arrive, int price, int num) :
+             const station_name_t &to, const Date &leave, const Date &arrive, int price, int num) :
     time_(time), status_(status), train_id_(train_id), from_(from), to_(to), leave_(leave), arrive_(arrive), price_(
     price), num_(num) {}
 
@@ -45,7 +45,86 @@ bool Order::operator!=(const Order &rhs) const {
 }
 
 AccountsManager::AccountsManager(const std::string &user_file_name, const std::string &now_users_file_name,
-                   const std::string &orders_file_name) :
-    now_users_(), user_file_(user_file_name), users_(now_users_file_name), orders_(orders_file_name), queue_() {}
+                                 const std::string &orders_file_name) :
+    now_users_(), user_file_(user_file_name), users_(now_users_file_name), orders_(orders_file_name) {}
+
+bool AccountsManager::ContainUser(const username_t &username) {
+  return !users_.Find(username.GetHash()).empty();
+}
+
+bool AccountsManager::IsUserLogIn(const username_t &username) {
+  return now_users_.find(username.GetHash()) != now_users_.end();
+}
+
+void AccountsManager::AddUser(User &user) {
+  users_.Insert(Pair<HashType, int>(user.username_.GetHash(), user_file_.Write(user)));
+}
+
+void AccountsManager::LogIn(const username_t &username) {
+  now_users_.insert(username.GetHash());
+}
+
+void AccountsManager::LogOut(const username_t &username) {
+  now_users_.erase(now_users_.find(username.GetHash()));
+}
+
+User AccountsManager::GetUser(const username_t &username) {
+  User user;
+  user_file_.Read(user, users_.Find(username.GetHash()).front());
+  return user;
+}
+
+User AccountsManager::GetUser(int id) {
+  User user;
+  user_file_.Read(user, id);
+  return user;
+}
+
+void
+AccountsManager::Modify(const username_t &username, const password_t &password, const name_t &name, const mail_t &mail,
+                        int privilege) {
+  User user;
+  int id = users_.Find(username.GetHash()).front();
+  user_file_.Read(user, id);
+  if (password != password_t()) {
+    user.password_ = password;
+  }
+  if (name != name_t()) {
+    user.name_ = name;
+  }
+  if (mail != mail_t()) {
+    user.mail_ = mail;
+  }
+  if (privilege != -1) {
+    user.privilege_ = privilege;
+  }
+  user_file_.Write(user, id);
+}
+
+Vector<Order> AccountsManager::GetOrder(const username_t &username) {
+  return orders_.Find(username.GetHash());
+}
+
+void AccountsManager::AddOrder(const username_t &username, const Order &order) {
+  orders_.Insert(Pair<HashType, Order>(username.GetHash(), order));
+}
+
+void AccountsManager::ModifyOrderStatus(const username_t &username, const Order &order,const Order::Status &status) {
+  ModifyOrderStatus(username.GetHash(), order, status);
+}
+
+void
+AccountsManager::ModifyOrderStatus(const HashType &username_hash, const Order &order, const Order::Status &status) {
+  Order new_order(order);
+  new_order.status_ = status;
+  orders_.Assign(Pair<HashType, Order>(username_hash, order), new_order);
+}
+
+void AccountsManager::Clear() {
+  now_users_.clear();
+  user_file_.clear();
+  users_.Clear();
+  orders_.Clear();
+}
 
 }

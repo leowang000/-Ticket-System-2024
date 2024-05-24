@@ -18,6 +18,7 @@ add_executable(ticket_system
         utility/STLite/String.h
         utility/STLite/List.h
         utility/STLite/Map.h
+        utility/STLite/Array.h
         src/time/Time.cpp
         src/time/Time.h
         src/account/Accounts.cpp

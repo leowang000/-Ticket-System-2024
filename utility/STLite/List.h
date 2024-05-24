@@ -271,6 +271,15 @@ class List {
     return iterator(next_iter);
   }
 
+  void replace(iterator pos, iterator target) { // combination of insert and erase, pos != target
+    pos.cur_->prev_->next_ = pos.cur_->next_;
+    pos.cur_->next_->prev_ = pos.cur_->prev_;
+    pos.cur_->prev_ = target.cur_->prev_;
+    pos.cur_->next_ = target.cur_;
+    target.cur_->prev_->next_ = pos.cur_;
+    target.cur_->prev_ = pos.cur_;
+  }
+
   void push_back(const T &value) {
     insert(tail_, new Node(value));
   }

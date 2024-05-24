@@ -5,8 +5,16 @@
 #include <cstring>
 
 #include "Pair.h"
+#include "Array.h"
 
 namespace bubble {
+
+template<class T>
+std::string ToString(T n, int width, char fill = '0', bool fill_left = true) {
+  std::string res(std::to_string(n));
+  std::string fill_string(width - res.size(), fill);
+  return fill_left ? fill_string + res : res + fill_string;
+}
 
 template<int len> class String;
 
@@ -16,6 +24,8 @@ template<int len> std::istream &operator>>(std::istream &, String<len> &);
 template<int len>
 class String {
  public:
+  using HashType = Pair<int, int>;
+
   String();
   String(const String<len> &);
   explicit String(const char *);
@@ -29,7 +39,7 @@ class String {
   bool operator==(const String<len> &) const;
   bool operator>=(const String<len> &) const;
   bool operator!=(const String<len> &) const;
-  Pair<int, int> GetHash() const;
+  HashType GetHash() const;
   std::string ToString() const;
   friend std::ostream &operator<<<len>(std::ostream &, const String<len> &);
   friend std::istream &operator>><len>(std::istream &, String<len> &);
@@ -44,8 +54,6 @@ class String {
 
   char str_[len + 1];
 };
-
-template<class T> std::string ToString(T n, int width, char fill = '0', bool fill_left = true);
 
 template<int len>
 String<len>::String() : str_() {}
@@ -113,7 +121,7 @@ bool String<len>::operator!=(const String<len> &rhs) const {
 }
 
 template<int len>
-Pair<int, int> String<len>::GetHash() const {
+String<len>::HashType String<len>::GetHash() const {
   return Pair<int, int>(Hash(b1, m1), Hash(b2, m2));
 }
 
@@ -141,13 +149,6 @@ int String<len>::Hash(int b, int m) const {
     res = (res * b + uint8_t(str_[i])) % m;
   }
   return res;
-}
-
-template<class T>
-std::string ToString(T n, int width, char fill, bool fill_left) {
-  std::string res(std::to_string(n));
-  std::string fill_string(width - res.size(), fill);
-  return fill_left ? fill_string + res : res + fill_string;
 }
 
 }

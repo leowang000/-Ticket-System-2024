@@ -21,9 +21,11 @@ class File : public std::fstream {
   void OpenOrCreate();
   bool IsCreated();
   void OpenAndClear();
+  void Clear();
   template<class T> void Read(T &dst, PtrType ptr);
   template<class T> void ReadRange(T *dst, PtrType ptr, int n);
   template<class T> void Write(T &src, PtrType ptr);
+  template<class T> void WriteRange(T *src, PtrType ptr, int n);
   int FileSize() const;
 
  private:
@@ -36,17 +38,18 @@ class FileWithInt : public File {
   explicit FileWithInt(const std::string &file_name);
 
   void Read(T &dst, int id); // 1-base
-  void ReadRange(T *dst, int id, int n);
-  void Write(T &src, int id); // 1-base
+  void ReadRange(T *dst, int n, int id);
+  int Write(T &src, int id = 0); // 1-base
+  int WriteRange(T *src, int n, int id = 0);
   void ReadInt(int &dst, int id); // 1-base
   void WriteInt(int &src, int id); // 1-base
   int DataCount() const;
 };
 
-template<class T, int len = 0, bool have_LRU = true>
+template<class T, int len = 0, bool have_buffer = true>
 class Storage {
  public:
-  explicit Storage(const std::string &file_name);
+  explicit Storage(const std::string &file_name, int buffer_pool_size = BufferPoolSize);
   ~Storage();
 
   void Read(T &dst, int id);
@@ -55,12 +58,13 @@ class Storage {
   void ReadInt(int &dst, int id);
   void WriteInt(int &src, int id);
   bool IsCreated();
+  void Clear();
 
  private:
   static constexpr int BufferPoolSize = 1024;
   FileWithInt<T, len> data_file_;
   FileWithInt<int> trash_file_;
-  LRU<T, len, have_LRU> *buffer;
+  LRU<T, len> *buffer;
   Set<int> pool_;
   int last_id_;
 };
@@ -90,6 +94,11 @@ void File::OpenAndClear() {
   open(file_name_, std::ios::out);
 }
 
+void File::Clear() {
+  open(file_name_, std::ios::out);
+  close();
+}
+
 template<class T>
 void File::Read(T &dst, PtrType ptr) {
   OpenOrCreate();
@@ -114,6 +123,14 @@ void File::Write(T &src, PtrType ptr) {
   close();
 }
 
+template<class T>
+void File::WriteRange(T *src, PtrType ptr, int n) {
+  OpenOrCreate();
+  seekp(ptr);
+  write(reinterpret_cast<char *>(src), sizeof(T) * n);
+  close();
+}
+
 int File::FileSize() const {
   return std::filesystem::file_size(file_name_);
 }
@@ -127,13 +144,26 @@ void FileWithInt<T, len>::Read(T &dst, int id) { // 1-base
 }
 
 template<class T, int len>
-void FileWithInt<T, len>::ReadRange(T *dst, int id, int n) {
+void FileWithInt<T, len>::ReadRange(T *dst, int n, int id) {
   File::ReadRange(dst, len * sizeof(int) + sizeof(T) * (id - 1), n);
 }
 
 template<class T, int len>
-void FileWithInt<T, len>::Write(T &src, int id) { // 1-base
+int FileWithInt<T, len>::Write(T &src, int id) { // 1-base
+  if (id == 0) {
+    id = DataCount() + 1;
+  }
   File::Write(src, len * sizeof(int) + sizeof(T) * (id - 1));
+  return id;
+}
+
+template<class T, int len>
+int FileWithInt<T, len>::WriteRange(T *src, int n, int id) {
+  if (id == 0) {
+    id = DataCount() + 1;
+  }
+  File::WriteRange(src, len * sizeof(int) + sizeof(T) * (id - 1), n);
+  return id;
 }
 
 template<class T, int len>
@@ -151,22 +181,22 @@ int FileWithInt<T, len>::DataCount() const { // 1-base
   return (FileSize() - len * sizeof(int)) / sizeof(T);
 }
 
-template<class T, int len, bool have_LRU>
-Storage<T, len, have_LRU>::Storage(const std::string &file_name) :
+template<class T, int len, bool have_buffer>
+Storage<T, len, have_buffer>::Storage(const std::string &file_name, int buffer_pool_size) :
     data_file_(file_name + "_data"), trash_file_(file_name + "_trash"), pool_(), buffer(
-    have_LRU ? new LRU<T, len, have_LRU>(BufferPoolSize, this) : nullptr) {
+    have_buffer ? new LRU<T, len>(buffer_pool_size, this) : nullptr) {
   if (data_file_.IsCreated()) {
     last_id_ = (data_file_.FileSize() - len) / sizeof(T);
     trash_file_.OpenOrCreate();
     int cnt = trash_file_.FileSize() / sizeof(int), dst[File::PageSize / sizeof(int)], i;
     for (i = 1; i + File::PageSize / sizeof(int) - 1 <= cnt; i += File::PageSize / sizeof(int)) {
-      trash_file_.ReadRange(dst, i, File::PageSize / sizeof(int));
+      trash_file_.ReadRange(dst, File::PageSize / sizeof(int), i);
       for (int id: dst) {
         pool_.insert(id);
       }
     }
     if (i <= cnt) {
-      trash_file_.ReadRange(dst, i, cnt - i + 1);
+      trash_file_.ReadRange(dst, cnt - i + 1, i);
       for (int j = 0; j < cnt - i + 1; j++) {
         pool_.insert(dst[j]);
       }
@@ -178,8 +208,8 @@ Storage<T, len, have_LRU>::Storage(const std::string &file_name) :
   }
 }
 
-template<class T, int len, bool have_LRU>
-Storage<T, len, have_LRU>::~Storage() {
+template<class T, int len, bool have_buffer>
+Storage<T, len, have_buffer>::~Storage() {
   delete buffer;
   trash_file_.OpenAndClear();
   int src[File::PageSize / sizeof(int)], cnt = 0;
@@ -197,9 +227,9 @@ Storage<T, len, have_LRU>::~Storage() {
   trash_file_.close();
 }
 
-template<class T, int len, bool have_LRU>
-void Storage<T, len, have_LRU>::Read(T &dst, int id) {
-  if constexpr (have_LRU) {
+template<class T, int len, bool have_buffer>
+void Storage<T, len, have_buffer>::Read(T &dst, int id) {
+  if constexpr (have_buffer) {
     if (buffer->Contain(id)) {
       dst = buffer->Fetch(id);
       return;
@@ -212,9 +242,9 @@ void Storage<T, len, have_LRU>::Read(T &dst, int id) {
   }
 }
 
-template<class T, int len, bool have_LRU>
-int Storage<T, len, have_LRU>::Write(T &src, int id, bool write_to_file) {
-  if constexpr (have_LRU) {
+template<class T, int len, bool have_buffer>
+int Storage<T, len, have_buffer>::Write(T &src, int id, bool write_to_file) {
+  if constexpr (have_buffer) {
     if (buffer->Contain(id) && !write_to_file) {
       buffer->Fetch(id) = src;
     }
@@ -250,29 +280,40 @@ int Storage<T, len, have_LRU>::Write(T &src, int id, bool write_to_file) {
   }
 }
 
-template<class T, int len, bool have_LRU>
-void Storage<T, len, have_LRU>::Erase(int id) {
+template<class T, int len, bool have_buffer>
+void Storage<T, len, have_buffer>::Erase(int id) {
   pool_.insert(id);
-  if constexpr (have_LRU) {
+  if constexpr (have_buffer) {
     if (buffer->Contain(id)) {
       buffer->Erase(id);
     }
   }
 }
 
-template<class T, int len, bool have_LRU>
-void Storage<T, len, have_LRU>::ReadInt(int &dst, int id) {
+template<class T, int len, bool have_buffer>
+void Storage<T, len, have_buffer>::ReadInt(int &dst, int id) {
   data_file_.ReadInt(dst, id);
 }
 
-template<class T, int len, bool have_LRU>
-void Storage<T, len, have_LRU>::WriteInt(int &src, int id) {
+template<class T, int len, bool have_buffer>
+void Storage<T, len, have_buffer>::WriteInt(int &src, int id) {
   data_file_.WriteInt(src, id);
 }
 
-template<class T, int len, bool have_LRU>
-bool Storage<T, len, have_LRU>::IsCreated() {
+template<class T, int len, bool have_buffer>
+bool Storage<T, len, have_buffer>::IsCreated() {
   return data_file_.IsCreated();
+}
+
+template<class T, int len, bool have_buffer>
+void Storage<T, len, have_buffer>::Clear() {
+  data_file_.Clear();
+  trash_file_.Clear();
+  pool_.clear();
+  last_id_ = 0;
+  if constexpr (have_buffer) {
+    buffer->Clear();
+  }
 }
 
 }

@@ -23,6 +23,7 @@ class BPlusTree {
   void Insert(const ValueType &value);
   void Assign(const ValueType &old, const T &value);
   void Erase(const ValueType &value);
+  void Clear();
 
  private:
   static constexpr int PageSize = 4096;
@@ -89,7 +90,7 @@ Vector<T> BPlusTree<Key, T>::Find(const Key &key) {
   }
   int now = root_;
   while (true) {
-    Node node;
+    static Node node;
     node_file_.Read(node, now);
     int id =
         LowerBound(node.data_, node.data_ + node.size_ - 1, ValueType(key, T()), typename ValueType::CompareByKey()) -
@@ -100,7 +101,7 @@ Vector<T> BPlusTree<Key, T>::Find(const Key &key) {
     }
   }
   while (true) {
-    Leaf leaf;
+    static Leaf leaf;
     leaf_file_.Read(leaf, now);
     ValueType *first = LowerBound(leaf.data_, leaf.data_ + leaf.size_, ValueType(key, T()),
                                   typename ValueType::CompareByKey());
@@ -132,7 +133,7 @@ void BPlusTree<Key, T>::Insert(const ValueType &value) {
   Vector<Node> nodes;
   Vector<int> node_ptr, ids;
   while (true) {
-    Node node;
+    static Node node;
     node_file_.Read(node, now);
     node_ptr.push_back(now);
     int id = UpperBound(node.data_, node.data_ + node.size_ - 1, value) - node.data_;
@@ -168,7 +169,7 @@ template<class Key, class T>
 void BPlusTree<Key, T>::Assign(const ValueType &old, const T &value) {
   int now = root_;
   while (true) {
-    Node node;
+    static Node node;
     node_file_.Read(node, now);
     int id = UpperBound(node.data_, node.data_ + node.size_ - 1, old) - node.data_;
     now = node.children_[id];
@@ -176,9 +177,9 @@ void BPlusTree<Key, T>::Assign(const ValueType &old, const T &value) {
       break;
     }
   }
-  Leaf leaf;
+  static Leaf leaf;
   leaf_file_.Read(leaf, now);
-  *LowerBound(leaf.data_, leaf.data_ + leaf.size_, old) = value;
+  LowerBound(leaf.data_, leaf.data_ + leaf.size_, old)->second = value;
   leaf_file_.Write(leaf, now);
 }
 
@@ -191,7 +192,7 @@ void BPlusTree<Key, T>::Erase(const ValueType &value) {
   Vector<Node> nodes;
   Vector<int> node_ptr, ids;
   while (true) {
-    Node node;
+    static Node node;
     node_file_.Read(node, now);
     node_ptr.push_back(now);
     int id = UpperBound(node.data_, node.data_ + node.size_ - 1, value) - node.data_;
@@ -216,6 +217,14 @@ void BPlusTree<Key, T>::Erase(const ValueType &value) {
 }
 
 template<class Key, class T>
+void BPlusTree<Key, T>::Clear() {
+  node_file_.Clear();
+  leaf_file_.Clear();
+  root_ = 0;
+  head_ = 0;
+}
+
+template<class Key, class T>
 BPlusTree<Key, T>::Node::Node(int size, bool is_leaf) : size_(size), is_leaf_(is_leaf), children_(), data_() {}
 
 template<class Key, class T>
@@ -225,7 +234,7 @@ template<class Key, class T>
 bool
 BPlusTree<Key, T>::InsertAdjustLeaf(Node &node, int node_ptr, int leaf_id, int now_leaf_ptr, const ValueType &value,
                                     int &new_leaf_ptr, ValueType &new_leaf_min) {
-  Leaf leaf;
+  static Leaf leaf;
   leaf_file_.Read(leaf, now_leaf_ptr);
   int id = LowerBound(leaf.data_, leaf.data_ + leaf.size_, value) - leaf.data_;
   if (id != leaf.size_ && leaf.data_[id] == value) {
@@ -310,7 +319,7 @@ template<class Key, class T>
 int BPlusTree<Key, T>::DeleteAdjustLeaf(Vector<Node> &nodes, const Vector<int> &ids, const ValueType &value) {
   Node &parent = nodes.back();
   int ptr_id = ids.back(), now_leaf_ptr = parent.children_[ptr_id];
-  Leaf leaf;
+  static Leaf leaf;
   leaf_file_.Read(leaf, now_leaf_ptr);
   int id = LowerBound(leaf.data_, leaf.data_ + leaf.size_, value) - leaf.data_;
   if (id == leaf.size_ || leaf.data_[id] != value) {
@@ -339,7 +348,7 @@ int BPlusTree<Key, T>::DeleteAdjustLeaf(Vector<Node> &nodes, const Vector<int> &
     }
     return -1;
   }
-  Leaf left_leaf, right_leaf;
+  static Leaf left_leaf, right_leaf;
   int left_leaf_ptr, right_leaf_ptr;
   bool have_left_sibling = (ptr_id != 0), have_right_sibling = (ptr_id != parent.size_ - 1);
   if (have_left_sibling) {
@@ -412,7 +421,7 @@ bool BPlusTree<Key, T>::DeleteAdjustNode(Node &node, int &id, Node &parent, int 
     node_file_.Write(node, now_node_ptr);
     return false;
   }
-  Node left_node, right_node;
+  static Node left_node, right_node;
   int left_node_ptr, right_node_ptr;
   bool have_left_sibling = (ptr_id != 0), have_right_sibling = (ptr_id != parent.size_ - 1);
   if (have_left_sibling) {

@@ -5,8 +5,13 @@
 #include "../time/Time.h"
 #include "../../utility/bpt/BPT.h"
 #include "../../utility/File/File.h"
+#include "../../utility/STLite/List.h"
+#include "../../utility/STLite/Array.h"
+#include "../account/Accounts.h"
 
 namespace bubble {
+
+class TrainManager;
 
 struct Train {
   static constexpr int MaxStationNum = 100;
@@ -14,36 +19,68 @@ struct Train {
   train_id_t train_id_;
   int station_num_, seat_num_, price_[MaxStationNum];
   station_name_t station_names_[MaxStationNum];
-  Time arrive_[MaxStationNum], leave_[MaxStationNum], begin_date, end_date;
-};
+  Time arrive_[MaxStationNum], leave_[MaxStationNum];
+  Date begin_date_, end_date_;
+  char type_;
+  bool released_;
 
-using Seat = int[Train::MaxStationNum - 1];
+  Train() = default;
+  Train(const train_id_t &train_id, int station_num, int seat_num, const Array<int, MaxStationNum - 1> &prices,
+        const Array<station_name_t, MaxStationNum> &stations, const Time &start_time,
+        const Array<int, MaxStationNum - 1> &travel_times, const Array<int, MaxStationNum - 2> &stop_over_times,
+        const Date &begin, const Date &end, char type);
+};
 
 struct TicketInfo {
   train_id_t train_id_;
   int seat_, price_;
   station_name_t from_, to_;
-  Time arrive_, leave_;
+  Date leave_, arrive_;
+
+  TicketInfo() = default;
+  TicketInfo(const train_id_t &train_id, int seat, int price, const station_name_t &from, const station_name_t &to,
+             const Date &leave, const Date &arrive);
+
+  std::string ToString() const;
 };
 
 class TrainManager {
  public:
-  bool ContainTrain(const Train &train);
-  bool AddTrain(const Train &train);
-  bool DeleteTrain(const train_id_t &train_id);
-  bool ReleaseTrain(const train_id_t &train_id);
+  using Seat = int[Train::MaxStationNum - 1];
+
+  static constexpr int MaxDateNum = 92;
+
+  TrainManager();
+
+  bool ContainTrain(const train_id_t &train_id);
+  bool IsTrainReleased(const train_id_t &train_id);
+  void AddTrain(Train &train);
+  void DeleteTrain(const train_id_t &train_id);
+  void ReleaseTrain(const train_id_t &train_id);
   Train GetTrain(const train_id_t &train_id);
-  Vector<TicketInfo> GetTicket(const Time &time, const station_name_t &from, const station_name_t &to);
-  Pair<TicketInfo, TicketInfo> GetTransfer(const station_name_t &from, const station_name_t &to);
-  int BuyTicket(const train_id_t &train_id, const Time &time, int num, const station_name_t &from,
+  Vector<TicketInfo> GetTicket(const Date &date, const station_name_t &from, const station_name_t &to);
+  Vector<Pair<TicketInfo, TicketInfo>>
+  GetTransfer(const Date &date, const station_name_t &from, const station_name_t &to);
+  int BuyTicket(const train_id_t &train_id, const Date &date, int num, const station_name_t &from,
                 const station_name_t &to);
+  void RefundTicket(const Order &order, AccountsManager &accounts);
+  void EnQueue(const username_t &username, const Order &order);
+  int GetSeatNum(const train_id_t &train_id, int offset, int station_id);
+  void Clear();
 
  private:
+  static int GetOffset(const Train &train, const Date &date, int id);
+  static void
+  GetFromAndToId(const Train &train, const station_name_t &from, const station_name_t &to, int &from_id, int &to_id);
+  int GetSeatNum(const train_id_t &train_id, int offset, int from_id, int to_id);
+  TicketInfo GetFirstTicket(const Train &train, const Date &date, int from_id, int to_id);
+
   Storage<Train, 0, false> train_file_;
-  BPlusTree<int, int> train_map_;
+  BPlusTree<HashType, int> train_map_;
   FileWithInt<Seat> seat_file_;
-  BPlusTree<int, int> seat_map_;
-  BPlusTree<int, Pair<int, int>> station_map_;
+  BPlusTree<HashType, int> seat_map_;
+  List<Pair<HashType, Order>> queue_;
+  BPlusTree<HashType, Pair<HashType, int>> station_map_;
 };
 
 }
