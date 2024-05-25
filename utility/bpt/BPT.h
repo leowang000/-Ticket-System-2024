@@ -24,13 +24,13 @@ class BPlusTree {
   void Assign(const ValueType &old, const T &value);
   void Erase(const ValueType &value);
   void Clear();
+  bool Empty() const;
 
  private:
   static constexpr int PageSize = 4096;
-  static constexpr int MaxNodeSize =
-      (PageSize + sizeof(Key) - sizeof(int) - sizeof(bool)) / (sizeof(int) + sizeof(ValueType));
+  static constexpr int MaxNodeSize = (PageSize - 12) / (sizeof(int) + sizeof(ValueType));
   static constexpr int MinNodeSize = (MaxNodeSize + 1) / 2;
-  static constexpr int MaxLeafSize = (PageSize - 2 * sizeof(int)) / sizeof(ValueType);
+  static constexpr int MaxLeafSize = (PageSize - 12) / sizeof(ValueType);
   static constexpr int MinLeafSize = (MaxLeafSize + 1) / 2;
 
   struct Node {
@@ -222,6 +222,11 @@ void BPlusTree<Key, T>::Clear() {
   leaf_file_.Clear();
   root_ = 0;
   head_ = 0;
+}
+
+template<class Key, class T>
+bool BPlusTree<Key, T>::Empty() const {
+  return root_ == 0;
 }
 
 template<class Key, class T>

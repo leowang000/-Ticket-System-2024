@@ -24,17 +24,6 @@ Train::Train(const train_id_t &train_id, int station_num, int seat_num, const Ar
   arrive_[station_num - 1] = leave_[station_num - 2] + Time(travel_times[station_num - 2]);
 }
 
-//std::string Train::ToString(const Date &date, TrainManager &trains) const {
-//  std::string res;
-//  res += train_id_.ToString() + " " + type_ + "\n";
-//  for (int i = 0; i < station_num_; i++) {
-//    res += station_names_[i].ToString() + " " + (i == 0 ? "xx-xx xx:xx" : (date + arrive_[i]).ToString()) + " -> " +
-//           (i == station_num_ - 1 ? "xx-xx xx:xx" : (date + leave_[i]).ToString()) + " " + std::to_string(price_[i]) +
-//           " " + (i == station_num_ - 1 ? "x" : std::to_string(
-//        trains.GetSeatNum(train_id_, Date::Diff(date, begin_date_).day_, i))) + "\n";
-//  }
-//}
-
 TicketInfo::TicketInfo(const train_id_t &train_id, int seat, int price, const station_name_t &from,
                        const station_name_t &to, const Date &leave, const Date &arrive) :
     train_id_(train_id), seat_(seat), price_(price), from_(from), to_(to), leave_(leave), arrive_(arrive) {}
@@ -44,12 +33,18 @@ std::string TicketInfo::ToString() const {
          arrive_.ToString() + std::to_string(price_) + " " + std::to_string(seat_);
 }
 
+TrainManager::TrainManager(const std::string &train_file_name, const std::string &train_map_file_name,
+                           const std::string &seat_file_name, const std::string &seat_map_file_name,
+                           const std::string &station_map_file_name) :
+    train_file_(train_file_name), train_map_(train_map_file_name), seat_file_(seat_file_name), seat_map_(
+    seat_map_file_name), station_map_(station_map_file_name) {}
+
 bool TrainManager::ContainTrain(const train_id_t &train_id) {
   return !train_map_.Find(train_id.GetHash()).empty();
 }
 
 bool TrainManager::IsTrainReleased(const bubble::train_id_t &train_id) {
-  Train train;
+  static Train train;
   train_file_.Read(train, train_map_.Find(train_id.GetHash()).front());
   return train.released_;
 }
@@ -67,8 +62,8 @@ void TrainManager::DeleteTrain(const train_id_t &train_id) {
 
 void TrainManager::ReleaseTrain(const train_id_t &train_id) {
   static Seat buffer[MaxDateNum];
+  static Train train;
   HashType train_hash = train_id.GetHash();
-  Train train;
   int id = train_map_.Find(train_hash).front();
   train_file_.Read(train, id);
   train.released_ = true;
@@ -86,10 +81,25 @@ void TrainManager::ReleaseTrain(const train_id_t &train_id) {
   }
 }
 
-Train TrainManager::GetTrain(const train_id_t &train_id) {
-  Train train;
+std::string TrainManager::GetTrainInfo(const train_id_t &train_id, const Date &date) {
+  static Train train;
+  static Seat seat;
+  std::string res;
   train_file_.Read(train, train_map_.Find(train_id.GetHash()).front());
-  return train;
+  if (Date::Diff(train.end_date_, date).day_ < 0) {
+    return res;
+  }
+  if (train.released_) {
+    seat_file_.Read(seat, seat_map_.Find(train_id.GetHash()).front() + Date::Diff(date, train.begin_date_).day_);
+  }
+  res += train.train_id_.ToString() + " " + train.type_ + "\n";
+  for (int i = 0; i < train.station_num_; i++) {
+    res += train.station_names_[i].ToString() + " " + (i == 0 ? "xx-xx xx:xx" : (date + train.arrive_[i]).ToString()) +
+           " -> " + (i == train.station_num_ - 1 ? "xx-xx xx:xx" : (date + train.leave_[i]).ToString()) + " " +
+           std::to_string(train.price_[i]) + " " +
+           (i == train.station_num_ - 1 ? "x" : std::to_string(train.released_ ? seat[i] : train.seat_num_)) + "\n";
+  }
+  return res;
 }
 
 Vector<TicketInfo> TrainManager::GetTicket(const Date &date, const station_name_t &from, const station_name_t &to) {
@@ -161,8 +171,9 @@ TrainManager::GetTransfer(const Date &date, const station_name_t &from, const st
   return res;
 }
 
-int TrainManager::BuyTicket(const train_id_t &train_id, const Date &date, int num, const station_name_t &from,
-                            const station_name_t &to) {
+Order
+TrainManager::BuyTicket(int time, const train_id_t &train_id, const Date &date, int num, const station_name_t &from,
+                        const station_name_t &to) {
   static Train train;
   HashType train_hash = train_id.GetHash();
   train_file_.Read(train, train_map_.Find(train_hash).front());
@@ -173,20 +184,31 @@ int TrainManager::BuyTicket(const train_id_t &train_id, const Date &date, int nu
   int seat_id = seat_map_.Find(train_hash).front() + offset;
   seat_file_.Read(buffer, seat_id);
   if (*MinElement(buffer + from_id, buffer + to_id) < num) {
-    return 0;
+    return Order(time, Order::kPending, train_id, from, to,
+                 train.begin_date_ + Time(offset, 0, 0) + train.leave_[from_id],
+                 train.begin_date_ + Time(offset, 0, 0) + train.arrive_[to_id],
+                 train.price_[to_id] - train.price_[from_id], num);
   }
   for (int i = from_id; i < to_id; i++) {
     buffer[i] -= num;
   }
   seat_file_.Write(buffer, seat_id);
-  return train.price_[to_id] - train.price_[from_id];
+  return Order(time, Order::kSuccess, train_id, from, to,
+               train.begin_date_ + Time(offset, 0, 0) + train.leave_[from_id],
+               train.begin_date_ + Time(offset, 0, 0) + train.arrive_[to_id],
+               train.price_[to_id] - train.price_[from_id], num);
 }
 
 void TrainManager::RefundTicket(const Order &order, AccountsManager &accounts) {
-  static Train train;
-  if (order.status_ != Order::kSuccess) {
-    return;
+  if (order.status_ == Order::kPending) {
+    for (auto it = queue_.begin(); it != queue_.end(); ++it) {
+      if (it->second.time_ == order.time_) {
+        queue_.erase(it);
+        return;
+      }
+    }
   }
+  static Train train;
   HashType train_hash = order.train_id_.GetHash();
   train_file_.Read(train, train_map_.Find(train_hash).front());
   int from_id, to_id;
@@ -220,12 +242,6 @@ void TrainManager::RefundTicket(const Order &order, AccountsManager &accounts) {
 
 void TrainManager::EnQueue(const username_t &username, const Order &order) {
   queue_.push_back(Pair<HashType, Order>(username.GetHash(), order));
-}
-
-int TrainManager::GetSeatNum(const bubble::train_id_t &train_id, int offset, int station_id) {
-  static Seat buffer;
-  seat_file_.Read(buffer, seat_map_.Find(train_id.GetHash()).front() + offset);
-  return buffer[station_id];
 }
 
 void TrainManager::Clear() {

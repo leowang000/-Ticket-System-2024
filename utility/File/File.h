@@ -69,36 +69,6 @@ class Storage {
   int last_id_;
 };
 
-File::File(const std::string &file_name) : std::fstream(), file_name_(file_name) {}
-
-void File::OpenOrCreate() {
-  open(file_name_);
-  if (good()) {
-    return;
-  }
-  open(file_name_, std::ios::out);
-  close();
-  open(file_name_);
-}
-
-bool File::IsCreated() {
-  open(file_name_);
-  if (good()) {
-    close();
-    return true;
-  }
-  return false;
-}
-
-void File::OpenAndClear() {
-  open(file_name_, std::ios::out);
-}
-
-void File::Clear() {
-  open(file_name_, std::ios::out);
-  close();
-}
-
 template<class T>
 void File::Read(T &dst, PtrType ptr) {
   OpenOrCreate();
@@ -129,10 +99,6 @@ void File::WriteRange(T *src, PtrType ptr, int n) {
   seekp(ptr);
   write(reinterpret_cast<char *>(src), sizeof(T) * n);
   close();
-}
-
-int File::FileSize() const {
-  return std::filesystem::file_size(file_name_);
 }
 
 template<class T, int len>
@@ -183,8 +149,13 @@ int FileWithInt<T, len>::DataCount() const { // 1-base
 
 template<class T, int len, bool have_buffer>
 Storage<T, len, have_buffer>::Storage(const std::string &file_name, int buffer_pool_size) :
-    data_file_(file_name + "_data"), trash_file_(file_name + "_trash"), pool_(), buffer(
-    have_buffer ? new LRU<T, len>(buffer_pool_size, this) : nullptr) {
+    data_file_(file_name + "_data"), trash_file_(file_name + "_trash"), pool_() {
+  if constexpr (have_buffer) {
+    buffer = new LRU<T, len>(buffer_pool_size, this);
+  }
+  else {
+    buffer = nullptr;
+  }
   if (data_file_.IsCreated()) {
     last_id_ = (data_file_.FileSize() - len) / sizeof(T);
     trash_file_.OpenOrCreate();

@@ -10,6 +10,11 @@ Time::Time(int d, int hr, int mi) : day_(d), hour_(hr), min_(mi) {}
 
 Time::Time(int n) : day_(n / 1440), hour_(n % 1440 / 60), min_(n % 60) {}
 
+Time::Time(const std::string &str) : day_() {
+  hour_ = (str[0] - '0') * 10 + str[1] - '0';
+  min_ = (str[3] - '0') * 10 + str[4] - '0';
+}
+
 Time Time::operator+(const Time &rhs) const {
   return Time(GetMinutes() + rhs.GetMinutes());
 }
@@ -23,6 +28,19 @@ constexpr int Time::GetMinutes() const {
 }
 
 Date::Date(int m, int d, int hr, int mi) : m_(m), d_(d), hr_(hr), mi_(mi) {}
+
+Date::Date(const std::string &str) {
+  m_ = (str[0] - '0') * 10 + str[1] - '0';
+  d_ = (str[3] - '0') * 10 + str[4] - '0';
+  if (str.size() == 11) {
+    hr_ = (str[6] - '0') * 10 + str[7] - '0';
+    mi_ = (str[9] - '0') * 10 + str[10] - '0';
+  }
+  else {
+    hr_ = 0;
+    mi_ = 0;
+  }
+}
 
 std::string Date::ToString(bool require_date, bool require_time) const {
   std::string res;

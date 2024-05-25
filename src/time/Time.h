@@ -7,19 +7,20 @@ struct Time {
   Time() = default;
   explicit Time(int n);
   Time(int d, int hr, int mi);
+  explicit Time(const std::string &str);
 
   Time operator+(const Time &rhs) const;
   Time operator-(const Time &rhs) const;
+  constexpr int GetMinutes() const;
 
   int day_, hour_, min_;
-
- private:
-  constexpr int GetMinutes() const;
 };
 
 class Date {
  public:
-  explicit Date(int m = 0, int d = 0, int hr = 0, int mi = 0);
+  Date() = default;
+  Date(int m, int d, int hr, int mi);
+  explicit Date(const std::string &str);
 
   std::string ToString(bool require_date = true, bool require_time = true) const;
   Date operator+(const Time &rhs) const;

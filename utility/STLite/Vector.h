@@ -311,6 +311,14 @@ class Vector {
     erase(size_ - 1);
   }
 
+  T *data() {
+    return first_;
+  }
+
+  const T *data() const {
+    return first_;
+  }
+
  private:
   static const size_t kMinCapacity = 8;
 

@@ -16,6 +16,8 @@ std::string ToString(T n, int width, char fill = '0', bool fill_left = true) {
   return fill_left ? fill_string + res : res + fill_string;
 }
 
+int StringToInt(const std::string &str);
+
 template<int len> class String;
 
 template<int len> std::ostream &operator<<(std::ostream &, const String<len> &);
@@ -121,7 +123,7 @@ bool String<len>::operator!=(const String<len> &rhs) const {
 }
 
 template<int len>
-String<len>::HashType String<len>::GetHash() const {
+typename String<len>::HashType String<len>::GetHash() const {
   return Pair<int, int>(Hash(b1, m1), Hash(b2, m2));
 }
 
