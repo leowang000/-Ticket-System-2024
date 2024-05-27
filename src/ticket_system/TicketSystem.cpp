@@ -87,9 +87,9 @@ bool TicketSystem::GetInstruction() {
 }
 
 bool TicketSystem::ExecuteInstruction() {
-  std::fstream fs("tmp.txt", std::ios::app);
-  fs << param_.time_ << std::endl;
-  fs.close();
+//  std::fstream fs("tmp.txt", std::ios::app);
+//  fs << param_.time_ << std::endl;
+//  fs.close();
   std::cout << "[" + std::to_string(param_.time_) + "] ";
   switch (instruction_type_) {
     case kAddUser: {
@@ -252,10 +252,8 @@ bool TicketSystem::ExecuteInstruction() {
       }
       struct TimeCmp {
         bool operator()(const Pair<TicketInfo, TicketInfo> &lhs, const Pair<TicketInfo, TicketInfo> &rhs) const {
-          int lhs_time = Date::Diff(lhs.first.arrive_, lhs.first.leave_).GetMinutes() +
-                         Date::Diff(lhs.second.arrive_, lhs.second.leave_).GetMinutes();
-          int rhs_time = Date::Diff(rhs.first.arrive_, rhs.first.leave_).GetMinutes() +
-                         Date::Diff(rhs.second.arrive_, rhs.second.leave_).GetMinutes();
+          int lhs_time = Date::Diff(lhs.second.arrive_, lhs.first.leave_).GetMinutes();
+          int rhs_time = Date::Diff(rhs.second.arrive_, rhs.first.leave_).GetMinutes();
           int lhs_price = lhs.first.price_ + lhs.second.price_;
           int rhs_price = rhs.first.price_ + rhs.second.price_;
           if (lhs_time != rhs_time) {
@@ -272,10 +270,8 @@ bool TicketSystem::ExecuteInstruction() {
       };
       struct PriceCmp {
         bool operator()(const Pair<TicketInfo, TicketInfo> &lhs, const Pair<TicketInfo, TicketInfo> &rhs) const {
-          int lhs_time = Date::Diff(lhs.first.arrive_, lhs.first.leave_).GetMinutes() +
-                         Date::Diff(lhs.second.arrive_, lhs.second.leave_).GetMinutes();
-          int rhs_time = Date::Diff(rhs.first.arrive_, rhs.first.leave_).GetMinutes() +
-                         Date::Diff(rhs.second.arrive_, rhs.second.leave_).GetMinutes();
+          int lhs_time = Date::Diff(lhs.second.arrive_, lhs.first.leave_).GetMinutes();
+          int rhs_time = Date::Diff(rhs.second.arrive_, rhs.first.leave_).GetMinutes();
           int lhs_price = lhs.first.price_ + lhs.second.price_;
           int rhs_price = rhs.first.price_ + rhs.second.price_;
           if (lhs_price != rhs_price) {
@@ -301,10 +297,6 @@ bool TicketSystem::ExecuteInstruction() {
       break;
     }
     case kBuyTicket: {
-      if (param_.time_ == 133324) {
-        int stop;
-        stop = 0;
-      }
       if (param_['q'].empty()) {
         param_['q'] = "false";
       }

@@ -190,8 +190,7 @@ TrainManager::GetTransfer(const Date &date, const station_name_t &from, const st
       for (int j = 0; j < to_info.second; j++) {
         to_train_station_hash[j] = to_train.station_names_[j].GetHash();
       }
-      bool found = false;
-      for (int i = from_info.second + 1; !found && i < from_train.station_num_; i++) {
+      for (int i = from_info.second + 1; i < from_train.station_num_; i++) {
         for (int j = 0; j < to_info.second; j++) {
           if (from_train_station_hash[i] == to_train_station_hash[j]) {
             TicketInfo ticket_from = GetFirstTicket(from_train, date, from_info.second, i);
@@ -199,9 +198,7 @@ TrainManager::GetTransfer(const Date &date, const station_name_t &from, const st
                                                   from_train.begin_date_ + Time(offset, 0, 0) + from_train.arrive_[i],
                                                   j, to_info.second, false);
             if (ticket_to.train_id_ != train_id_t()) {
-              found = true;
               res.push_back(Pair<TicketInfo, TicketInfo>(ticket_from, ticket_to));
-              break;
             }
           }
         }
