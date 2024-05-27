@@ -91,14 +91,20 @@ bool TicketSystem::ExecuteInstruction() {
     case kAddUser: {
       User user{username_t(param_['u']), password_t(param_['p']), name_t(param_['n']), mail_t(param_['m']),
                 accounts_.Empty() ? 10 : StringToInt(param_['g'])};
-      if (accounts_.Empty() ||
-          (accounts_.IsUserLogIn(username_t(param_['c'])) && !accounts_.ContainUser(user.username_))) {
+      if (accounts_.Empty()) {
         accounts_.AddUser(user);
         std::cout << "0\n";
+        break;
       }
-      else {
-        std::cout << "-1\n";
+      if (accounts_.IsUserLogIn(username_t(param_['c'])) && !accounts_.ContainUser(user.username_)) {
+        User cur = accounts_.GetUser(username_t(param_['c']));
+        if (cur.privilege_ > user.privilege_) {
+          accounts_.AddUser(user);
+          std::cout << "0\n";
+          break;
+        }
       }
+      std::cout << "-1\n";
       break;
     }
     case kLogin: {
@@ -317,10 +323,6 @@ bool TicketSystem::ExecuteInstruction() {
       break;
     }
     case kQueryOrder: {
-      if (param_.time_ == 14126) {
-        int stop;
-        stop = 0;
-      }
       if (accounts_.IsUserLogIn(username_t(param_['u']))) {
         auto vec(accounts_.GetOrder(username_t(param_['u'])));
         std::cout << vec.size() << "\n";
