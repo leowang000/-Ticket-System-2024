@@ -28,7 +28,7 @@ class File : public std::fstream {
   template<class T> void WriteRange(T *src, PtrType ptr, int n);
   int FileSize() const;
 
- private:
+ public:
   std::string file_name_;
 };
 
@@ -157,9 +157,9 @@ Storage<T, len, have_buffer>::Storage(const std::string &file_name, int buffer_p
     buffer = nullptr;
   }
   if (data_file_.IsCreated()) {
-    last_id_ = (data_file_.FileSize() - len) / sizeof(T);
+    last_id_ = data_file_.DataCount();
     trash_file_.OpenOrCreate();
-    int cnt = trash_file_.FileSize() / sizeof(int), dst[File::PageSize / sizeof(int)], i;
+    int cnt = trash_file_.DataCount(), dst[File::PageSize / sizeof(int)], i;
     for (i = 1; i + File::PageSize / sizeof(int) - 1 <= cnt; i += File::PageSize / sizeof(int)) {
       trash_file_.ReadRange(dst, File::PageSize / sizeof(int), i);
       for (int id: dst) {
@@ -184,9 +184,8 @@ Storage<T, len, have_buffer>::~Storage() {
   delete buffer;
   trash_file_.OpenAndClear();
   int src[File::PageSize / sizeof(int)], cnt = 0;
-  while (!pool_.empty()) {
-    src[cnt++] = *pool_.begin();
-    pool_.erase(pool_.begin());
+  for (auto item : pool_) {
+    src[cnt++] = item;
     if (cnt == File::PageSize / sizeof(int)) {
       trash_file_.write(reinterpret_cast<char *>(&src), File::PageSize);
       cnt = 0;

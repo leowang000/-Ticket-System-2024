@@ -7,9 +7,10 @@ namespace bubble {
 TicketSystem::TicketSystem(const std::string &user_file_name, const std::string &user_map_file_name,
                            const std::string &orders_file_name, const std::string &train_file_name,
                            const std::string &train_map_file_name, const std::string &seat_file_name,
-                           const std::string &seat_map_file_name, const std::string &station_map_file_name) :
+                           const std::string &seat_map_file_name, const std::string &station_map_file_name,
+                           const std::string &queue_file_name) :
     trains_(train_file_name, train_map_file_name, seat_file_name, seat_map_file_name,
-            station_map_file_name), accounts_(user_file_name, user_map_file_name,
+            station_map_file_name, queue_file_name), accounts_(user_file_name, user_map_file_name,
                                               orders_file_name), instruction_type_(), param_() {}
 
 std::string &TicketSystem::InstructionParameter::operator[](char ch) {

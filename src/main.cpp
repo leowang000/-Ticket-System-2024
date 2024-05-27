@@ -12,6 +12,7 @@ const std::string train_map_file_name = "train_map";
 const std::string seat_file_name = "seat";
 const std::string seat_map_file_name = "seat_map";
 const std::string station_map_file_name = "station_map";
+const std::string queue_file_name = "queue";
 
 void ClearFiles() {
   std::filesystem::remove(user_file_name);
@@ -38,17 +39,19 @@ void ClearFiles() {
   std::filesystem::remove(station_map_file_name + "_leaf_trash");
   std::filesystem::remove(station_map_file_name + "_node_data");
   std::filesystem::remove(station_map_file_name + "_node_trash");
+  std::filesystem::remove(queue_file_name);
 }
 
 int main() {
   //ClearFiles();
-  //freopen("../testcases/13.in","r", stdin);
+  //freopen("../testcases/7.in","r", stdin);
   //freopen("output.txt", "w", stdout);
   std::ios::sync_with_stdio(false);
   std::cin.tie(nullptr);
   std::cout.tie(nullptr);
   bubble::TicketSystem ticket_system(user_file_name, user_map_file_name, orders_file_name, train_file_name,
-                                     train_map_file_name, seat_file_name, seat_map_file_name, station_map_file_name);
+                                     train_map_file_name, seat_file_name, seat_map_file_name, station_map_file_name,
+                                     queue_file_name);
   while (ticket_system.GetInstruction()) {
     if (ticket_system.ExecuteInstruction()) {
       return 0;

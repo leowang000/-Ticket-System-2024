@@ -16,7 +16,8 @@ class TicketSystem {
   TicketSystem(const std::string &user_file_name, const std::string &user_map_file_name,
                const std::string &orders_file_name, const std::string &train_file_name,
                const std::string &train_map_file_name, const std::string &seat_file_name,
-               const std::string &seat_map_file_name, const std::string &station_map_file_name);
+               const std::string &seat_map_file_name, const std::string &station_map_file_name,
+               const std::string &queue_file_name);
 
   bool GetInstruction();
   bool ExecuteInstruction();

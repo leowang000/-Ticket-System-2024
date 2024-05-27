@@ -52,7 +52,9 @@ class TrainManager {
 
   TrainManager(const std::string &train_file_name, const std::string &train_map_file_name,
                const std::string &seat_file_name, const std::string &seat_map_file_name,
-               const std::string &station_map_file_name);
+               const std::string &station_map_file_name, const std::string &queue_file_name);
+
+  ~TrainManager();
 
   bool ContainTrain(const train_id_t &train_id);
   bool IsTrainReleased(const train_id_t &train_id);
@@ -81,6 +83,7 @@ class TrainManager {
   FileWithInt<Seat> seat_file_;
   BPlusTree<HashType, int> seat_map_;
   BPlusTree<HashType, Pair<HashType, int>> station_map_;
+  FileWithInt<Pair<HashType, Order>>queue_file_;
   List<Pair<HashType, Order>> queue_;
 };
 
