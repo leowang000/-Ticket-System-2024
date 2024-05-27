@@ -19,7 +19,7 @@ class File : public std::fstream {
   explicit File(const std::string &file_name);
 
   void OpenOrCreate();
-  bool IsCreated();
+  bool IsCreated() const;
   void OpenAndClear();
   void Clear();
   template<class T> void Read(T &dst, PtrType ptr);
@@ -144,7 +144,7 @@ void FileWithInt<T, len>::WriteInt(int &src, int id) { // 1-base
 
 template<class T, int len>
 int FileWithInt<T, len>::DataCount() const { // 1-base
-  return (FileSize() - len * sizeof(int)) / sizeof(T);
+  return IsCreated() ? (FileSize() - len * sizeof(int)) / sizeof(T) : 0;
 }
 
 template<class T, int len, bool have_buffer>
@@ -244,9 +244,7 @@ int Storage<T, len, have_buffer>::Write(T &src, int id, bool write_to_file) {
         pool_.erase(pool_.begin());
       }
     }
-    else {
-      data_file_.Write(src, id);
-    }
+    data_file_.Write(src, id);
     return id;
   }
 }

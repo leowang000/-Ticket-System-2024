@@ -27,6 +27,16 @@ constexpr int Time::GetMinutes() const {
   return 1440 * day_ + 60 * hour_ + min_;
 }
 
+bool Date::CompareByDay::operator()(const Date &lhs, const Date &rhs) const {
+  return lhs.m_ < rhs.m_ || (lhs.m_ == rhs.m_ && lhs.d_ < rhs.d_);
+}
+
+bool Date::CompareByTime::operator()(const Date &lhs, const Date &rhs) const {
+  return lhs.m_ < rhs.m_ || (lhs.m_ == rhs.m_ && lhs.d_ < rhs.d_) ||
+         (lhs.m_ == rhs.m_ && lhs.d_ == rhs.d_ && lhs.hr_ < rhs.hr_) ||
+         (lhs.m_ == rhs.m_ && lhs.d_ == rhs.d_ && lhs.hr_ == rhs.hr_ && lhs.mi_ < rhs.mi_);
+}
+
 Date::Date(int m, int d, int hr, int mi) : m_(m), d_(d), hr_(hr), mi_(mi) {}
 
 Date::Date(const std::string &str) {
@@ -83,13 +93,13 @@ Date Date::operator-(const Time &rhs) const {
     hr += 24;
     d--;
   }
-  int m = *UpperBound(DayOfMonth, DayOfMonth + 13, d);
-  return Date(m, d + 1 - DayOfMonth[m - 1], hr, mi);
+  int m = UpperBound(SumDayOfMonth, SumDayOfMonth + 13, d) - SumDayOfMonth;
+  return Date(m, d + 1 - SumDayOfMonth[m - 1], hr, mi);
 }
 
 Time Date::Diff(const Date &date1, const Date &date2) {
   int d1 = SumDayOfMonth[date1.m_ - 1] + date1.d_ - 1, d2 = SumDayOfMonth[date2.m_ - 1] + date2.d_ - 1;
-  int d = d2 - d1, hr = date2.hr_ - date1.hr_, mi = date2.mi_ - date1.mi_;
+  int d = d1 - d2, hr = date1.hr_ - date2.hr_, mi = date1.mi_ - date2.mi_;
   if (mi < 0) {
     mi += 60;
     hr--;

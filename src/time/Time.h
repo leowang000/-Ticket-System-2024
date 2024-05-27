@@ -18,6 +18,14 @@ struct Time {
 
 class Date {
  public:
+  struct CompareByDay {
+    bool operator()(const Date &lhs, const Date &rhs) const;
+  };
+
+  struct CompareByTime {
+    bool operator()(const Date &lhs, const Date &rhs) const;
+  };
+
   Date() = default;
   Date(int m, int d, int hr, int mi);
   explicit Date(const std::string &str);

@@ -26,8 +26,6 @@ bool TicketSystem::GetInstruction() {
   sstr >> ch >> param_.time_ >> ch >> str;
   if (str == "add_user") {
     instruction_type_ = kAddUser;
-    param_['c'].clear();
-    param_['g'].clear();
   }
   else if (str == "login") {
     instruction_type_ = kLogin;
@@ -92,9 +90,9 @@ bool TicketSystem::ExecuteInstruction() {
   switch (instruction_type_) {
     case kAddUser: {
       User user{username_t(param_['u']), password_t(param_['p']), name_t(param_['n']), mail_t(param_['m']),
-                param_['g'].empty() ? 10 : StringToInt(param_['g'])};
-      if ((param_['c'].empty() || accounts_.IsUserLogIn(username_t(param_['c']))) &&
-          !accounts_.ContainUser(user.username_)) {
+                accounts_.Empty() ? 10 : StringToInt(param_['g'])};
+      if (accounts_.Empty() ||
+          (accounts_.IsUserLogIn(username_t(param_['c'])) && !accounts_.ContainUser(user.username_))) {
         accounts_.AddUser(user);
         std::cout << "0\n";
       }
@@ -104,7 +102,7 @@ bool TicketSystem::ExecuteInstruction() {
       break;
     }
     case kLogin: {
-      if (accounts_.ContainUser(username_t(param_['u']))) {
+      if (accounts_.ContainUser(username_t(param_['u'])) && !accounts_.IsUserLogIn(username_t(param_['u']))) {
         User user = accounts_.GetUser(username_t(param_['u']));
         if (user.password_ == password_t(param_['p'])) {
           accounts_.LogIn(username_t(param_['u']));
@@ -152,7 +150,7 @@ bool TicketSystem::ExecuteInstruction() {
       break;
     }
     case kAddTrain: {
-      if (trains_.ContainTrain(train_id_t(param_['i']))) {
+      if (!trains_.ContainTrain(train_id_t(param_['i']))) {
         Train train{train_id_t(param_['i']), StringToInt(param_['n']), StringToInt(param_['m']),
                     Array<int, Train::MaxStationNum - 1>(param_['p']),
                     Array<station_name_t, Train::MaxStationNum>(param_['s']), Time(param_['x']),
@@ -301,31 +299,38 @@ bool TicketSystem::ExecuteInstruction() {
         Order order(
             trains_.BuyTicket(param_.time_, train_id_t(param_['i']), Date(param_['d']), StringToInt(param_['n']),
                               station_name_t(param_['f']), station_name_t(param_['t'])));
-        if (order.status_ == Order::kSuccess) {
-          accounts_.AddOrder(username_t(param_['u']), order);
-          std::cout << order.price_ << "\n";
-          break;
-        }
-        if (param_['q'] == "true") {
-          accounts_.AddOrder(username_t(param_['u']), order);
-          trains_.EnQueue(username_t(param_['u']), order);
-          std::cout << "queue\n";
-          break;
+        if (order.time_ != 0) {
+          if (order.status_ == Order::kSuccess) {
+            accounts_.AddOrder(username_t(param_['u']), order);
+            std::cout << static_cast<unsigned long long>(order.price_) * order.num_ << "\n";
+            break;
+          }
+          if (param_['q'] == "true") {
+            accounts_.AddOrder(username_t(param_['u']), order);
+            trains_.EnQueue(username_t(param_['u']), order);
+            std::cout << "queue\n";
+            break;
+          }
         }
       }
       std::cout << "-1\n";
       break;
     }
     case kQueryOrder: {
+      if (param_.time_ == 14126) {
+        int stop;
+        stop = 0;
+      }
       if (accounts_.IsUserLogIn(username_t(param_['u']))) {
         auto vec(accounts_.GetOrder(username_t(param_['u'])));
-        std::cout << vec.size();
+        std::cout << vec.size() << "\n";
         for (int i = vec.size() - 1; i >= 0; i--) {
           std::cout << vec[i].ToString() << "\n";
         }
         break;
       }
       std::cout << "-1\n";
+      break;
     }
     case kRefundTicket: {
       if (param_['n'].empty()) {
@@ -334,9 +339,11 @@ bool TicketSystem::ExecuteInstruction() {
       if (accounts_.IsUserLogIn(username_t(param_['u']))) {
         int n = StringToInt(param_['n']);
         auto vec(accounts_.GetOrder(username_t(param_['u'])));
-        if (StringToInt(param_['n']) <= vec.size() && vec[vec.size() - n].status_ != Order::kRefunded) {
+        if (n <= vec.size() && vec[vec.size() - n].status_ != Order::kRefunded) {
           accounts_.ModifyOrderStatus(username_t(param_['u']), vec[vec.size() - n], Order::kRefunded);
           trains_.RefundTicket(vec[vec.size() - n], accounts_);
+          std::cout << "0\n";
+          break;
         }
       }
       std::cout << "-1\n";

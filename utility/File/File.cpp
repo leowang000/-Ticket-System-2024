@@ -14,13 +14,8 @@ void File::OpenOrCreate() {
   open(file_name_);
 }
 
-bool File::IsCreated() {
-  open(file_name_);
-  if (good()) {
-    close();
-    return true;
-  }
-  return false;
+bool File::IsCreated() const {
+  return std::filesystem::exists(file_name_);
 }
 
 void File::OpenAndClear() {
@@ -33,7 +28,7 @@ void File::Clear() {
 }
 
 int File::FileSize() const {
-  return std::filesystem::file_size(file_name_);
+  return IsCreated() ? std::filesystem::file_size(file_name_) : 0;
 }
 
 }

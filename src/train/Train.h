@@ -64,17 +64,17 @@ class TrainManager {
   Vector<Pair<TicketInfo, TicketInfo>>
   GetTransfer(const Date &date, const station_name_t &from, const station_name_t &to);
   Order BuyTicket(int time, const train_id_t &train_id, const Date &date, int num, const station_name_t &from,
-                const station_name_t &to);
+                  const station_name_t &to);
   void RefundTicket(const Order &order, AccountsManager &accounts);
   void EnQueue(const username_t &username, const Order &order);
   void Clear();
 
  private:
-  static int GetOffset(const Train &train, const Date &date, int id);
+  static int GetOffset(const Train &train, const Date &date, int id, bool must_in_same_day = true);
   static void
   GetFromAndToId(const Train &train, const station_name_t &from, const station_name_t &to, int &from_id, int &to_id);
   int GetSeatNum(const train_id_t &train_id, int offset, int from_id, int to_id);
-  TicketInfo GetFirstTicket(const Train &train, const Date &date, int from_id, int to_id);
+  TicketInfo GetFirstTicket(const Train &train, const Date &date, int from_id, int to_id, bool must_in_same_day = true);
 
   Storage<Train, 0, false> train_file_;
   BPlusTree<HashType, int> train_map_;

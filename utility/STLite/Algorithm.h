@@ -17,8 +17,29 @@ class Greater {
   }
 };
 
-template<class Iter, class T, class Compare = Less<T>>
-Iter LowerBound(Iter first, Iter last, const T &value, Compare cmp = Compare()) {
+template<class Iter, class T>
+Iter LowerBound(Iter first, Iter last, const T &value) {
+  if (first == last) {
+    return last;
+  }
+  Iter lo = first, hi = last - 1;
+  if (*hi < value) {
+    return last;
+  }
+  while (lo != hi) {
+    Iter mid = lo + ((hi - lo) >> 1);
+    if (*mid < value) {
+      lo = mid + 1;
+    }
+    else {
+      hi = mid;
+    }
+  }
+  return lo;
+}
+
+template<class Iter, class T, class Compare>
+Iter LowerBound(Iter first, Iter last, const T &value, Compare cmp) {
   if (first == last) {
     return last;
   }
@@ -38,8 +59,29 @@ Iter LowerBound(Iter first, Iter last, const T &value, Compare cmp = Compare()) 
   return lo;
 }
 
-template<class Iter, class T, class Compare = Less<T>>
-Iter UpperBound(Iter first, Iter last, const T &value, Compare cmp = Compare()) {
+template<class Iter, class T>
+Iter UpperBound(Iter first, Iter last, const T &value) {
+  if (first == last) {
+    return last;
+  }
+  Iter lo = first, hi = last - 1;
+  if (!(value < *hi)) {
+    return last;
+  }
+  while (lo != hi) {
+    Iter mid = lo + ((hi - lo) >> 1);
+    if (value < *mid) {
+      hi = mid;
+    }
+    else {
+      lo = mid + 1;
+    }
+  }
+  return lo;
+}
+
+template<class Iter, class T, class Compare>
+Iter UpperBound(Iter first, Iter last, const T &value, Compare cmp) {
   if (first == last) {
     return last;
   }
@@ -169,7 +211,7 @@ void Sort(T *first, T *last) {
 
 template<class T, class Compare>
 void Sort(T *first, T *last, Compare cmp) {
-  if (first + 1 == last) {
+  if (first == last || first + 1 == last) {
     return;
   }
   int lo = 0, hi = last - first - 1, mid = (lo + hi) / 2;

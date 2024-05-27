@@ -33,7 +33,7 @@ struct Order {
 
   Order() = default;
   explicit Order(int time, const Status &status, const train_id_t &train_id, const station_name_t &from,
-                 const station_name_t &to, const Date &leave, const Date &arrive, int price, int num);
+                 const station_name_t &to, const Date &leave, const Date &arrive, int price, int num, int offset);
   Order(const Order &other) = default;
   Order &operator=(const Order &other) = default;
 
@@ -43,7 +43,7 @@ struct Order {
   bool operator>(const Order &rhs) const;
   bool operator!=(const Order &rhs) const;
 
-  int time_, price_, num_;
+  int time_, price_, num_, offset_;
   Status status_;
   train_id_t train_id_;
   station_name_t from_, to_;
@@ -55,6 +55,7 @@ class AccountsManager {
   AccountsManager(const std::string &user_file_name, const std::string &user_map_file_name,
                   const std::string &orders_file_name);
 
+  bool Empty() const;
   bool ContainUser(const username_t &username);
   bool IsUserLogIn(const username_t &username);
   void AddUser(User &user);

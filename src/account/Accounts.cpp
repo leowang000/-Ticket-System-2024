@@ -11,9 +11,9 @@ std::string User::ToString() const {
 }
 
 Order::Order(int time, const Order::Status &status, const train_id_t &train_id, const station_name_t &from,
-             const station_name_t &to, const Date &leave, const Date &arrive, int price, int num) :
+             const station_name_t &to, const Date &leave, const Date &arrive, int price, int num, int offset) :
     time_(time), status_(status), train_id_(train_id), from_(from), to_(to), leave_(leave), arrive_(arrive), price_(
-    price), num_(num) {}
+    price), num_(num), offset_(offset) {}
 
 std::string Order::ToString() const {
   std::string status_string;
@@ -51,6 +51,10 @@ bool Order::operator!=(const Order &rhs) const {
 AccountsManager::AccountsManager(const std::string &user_file_name, const std::string &user_map_file_name,
                                  const std::string &orders_file_name) :
     now_users_(), user_file_(user_file_name), user_map_(user_map_file_name), orders_(orders_file_name) {}
+
+bool AccountsManager::Empty() const {
+  return user_map_.Empty();
+}
 
 bool AccountsManager::ContainUser(const username_t &username) {
   return !user_map_.Find(username.GetHash()).empty();

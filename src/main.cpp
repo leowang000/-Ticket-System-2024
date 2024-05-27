@@ -41,13 +41,19 @@ void ClearFiles() {
 }
 
 int main() {
-  ClearFiles();
+  //ClearFiles();
+  //freopen("../testcases/9.in","r", stdin);
+  //freopen("output.txt", "w", stdout);
+  std::ios::sync_with_stdio(false);
+  std::cin.tie(nullptr);
+  std::cout.tie(nullptr);
   bubble::TicketSystem ticket_system(user_file_name, user_map_file_name, orders_file_name, train_file_name,
                                      train_map_file_name, seat_file_name, seat_map_file_name, station_map_file_name);
   while (ticket_system.GetInstruction()) {
     if (ticket_system.ExecuteInstruction()) {
       return 0;
     }
+    std::cout << std::flush;
   }
   return 0;
 }

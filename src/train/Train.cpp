@@ -19,7 +19,7 @@ Train::Train(const train_id_t &train_id, int station_num, int seat_num, const Ar
   leave_[0] = start_time;
   for (int i = 1; i <= station_num - 2; i++) {
     arrive_[i] = leave_[i - 1] + Time(travel_times[i - 1]);
-    leave_[i] = arrive_[i] + Time(stop_over_times[i]);
+    leave_[i] = arrive_[i] + Time(stop_over_times[i - 1]);
   }
   arrive_[station_num - 1] = leave_[station_num - 2] + Time(travel_times[station_num - 2]);
 }
@@ -30,7 +30,7 @@ TicketInfo::TicketInfo(const train_id_t &train_id, int seat, int price, const st
 
 std::string TicketInfo::ToString() const {
   return train_id_.ToString() + " " + from_.ToString() + " " + leave_.ToString() + " -> " + to_.ToString() + " " +
-         arrive_.ToString() + std::to_string(price_) + " " + std::to_string(seat_);
+         arrive_.ToString() + " " + std::to_string(price_) + " " + std::to_string(seat_);
 }
 
 TrainManager::TrainManager(const std::string &train_file_name, const std::string &train_map_file_name,
@@ -68,7 +68,7 @@ void TrainManager::ReleaseTrain(const train_id_t &train_id) {
   train_file_.Read(train, id);
   train.released_ = true;
   train_file_.Write(train, id);
-  int date_num = Date::Diff(train.end_date_, train.begin_date_).day_;
+  int date_num = Date::Diff(train.end_date_, train.begin_date_).day_ + 1;
   for (int j = 0; j < date_num; j++) {
     for (int i = 0; i < train.station_num_; i++) {
       buffer[j][i] = train.seat_num_;
@@ -86,7 +86,7 @@ std::string TrainManager::GetTrainInfo(const train_id_t &train_id, const Date &d
   static Seat seat;
   std::string res;
   train_file_.Read(train, train_map_.Find(train_id.GetHash()).front());
-  if (Date::Diff(train.end_date_, date).day_ < 0) {
+  if (Date::Diff(train.end_date_, date).day_ < 0 || Date::Diff(date, train.begin_date_).day_ < 0) {
     return res;
   }
   if (train.released_) {
@@ -114,7 +114,10 @@ Vector<TicketInfo> TrainManager::GetTicket(const Date &date, const station_name_
       if (from_id < to_id) {
         Train train;
         train_file_.Read(train, train_map_.Find(train_hash).front());
-        res.push_back(GetFirstTicket(train, date, from_id, to_id));
+        TicketInfo ticket(GetFirstTicket(train, date, from_id, to_id));
+        if (ticket.train_id_ != train_id_t()) {
+          res.push_back(ticket);
+        }
       }
       from_ptr++;
       to_ptr++;
@@ -137,11 +140,15 @@ TrainManager::GetTransfer(const Date &date, const station_name_t &from, const st
   Vector<Pair<HashType, int>> from_trains(station_map_.Find(from.GetHash()));
   Vector<Pair<HashType, int>> to_trains(station_map_.Find(to.GetHash()));
   for (auto &from_info: from_trains) {
+    train_file_.Read(from_train, train_map_.Find(from_info.first).front());
+    int offset = GetOffset(from_train, date, from_info.second);
+    if (offset == -1) {
+      continue;
+    }
     for (auto &to_info: to_trains) {
       if (from_info.first == to_info.first) {
         continue;
       }
-      train_file_.Read(from_train, train_map_.Find(from_info.first).front());
       train_file_.Read(to_train, train_map_.Find(to_info.first).front());
       for (int i = from_info.second + 1; i < from_train.station_num_; i++) {
         from_train_station_hash[i] = from_train.station_names_[i].GetHash();
@@ -154,10 +161,9 @@ TrainManager::GetTransfer(const Date &date, const station_name_t &from, const st
         for (int j = 0; j < to_info.second; j++) {
           if (from_train_station_hash[i] == to_train_station_hash[j]) {
             TicketInfo ticket_from = GetFirstTicket(from_train, date, from_info.second, i);
-            int offset = GetOffset(from_train, date, from_info.second);
             TicketInfo ticket_to = GetFirstTicket(to_train,
                                                   from_train.begin_date_ + Time(offset, 0, 0) + from_train.arrive_[i],
-                                                  j, to_info.second);
+                                                  j, to_info.second, false);
             if (ticket_to.train_id_ != train_id_t()) {
               found = true;
               res.push_back(Pair<TicketInfo, TicketInfo>(ticket_from, ticket_to));
@@ -180,6 +186,9 @@ TrainManager::BuyTicket(int time, const train_id_t &train_id, const Date &date, 
   int from_id, to_id;
   GetFromAndToId(train, from, to, from_id, to_id);
   int offset = GetOffset(train, date, from_id);
+  if (offset == -1) {
+    return Order();
+  }
   static Seat buffer;
   int seat_id = seat_map_.Find(train_hash).front() + offset;
   seat_file_.Read(buffer, seat_id);
@@ -187,7 +196,7 @@ TrainManager::BuyTicket(int time, const train_id_t &train_id, const Date &date, 
     return Order(time, Order::kPending, train_id, from, to,
                  train.begin_date_ + Time(offset, 0, 0) + train.leave_[from_id],
                  train.begin_date_ + Time(offset, 0, 0) + train.arrive_[to_id],
-                 train.price_[to_id] - train.price_[from_id], num);
+                 train.price_[to_id] - train.price_[from_id], num, offset);
   }
   for (int i = from_id; i < to_id; i++) {
     buffer[i] -= num;
@@ -196,7 +205,7 @@ TrainManager::BuyTicket(int time, const train_id_t &train_id, const Date &date, 
   return Order(time, Order::kSuccess, train_id, from, to,
                train.begin_date_ + Time(offset, 0, 0) + train.leave_[from_id],
                train.begin_date_ + Time(offset, 0, 0) + train.arrive_[to_id],
-               train.price_[to_id] - train.price_[from_id], num);
+               train.price_[to_id] - train.price_[from_id], num, offset);
 }
 
 void TrainManager::RefundTicket(const Order &order, AccountsManager &accounts) {
@@ -222,7 +231,7 @@ void TrainManager::RefundTicket(const Order &order, AccountsManager &accounts) {
   }
   auto it = queue_.begin();
   while (it != queue_.end()) {
-    if (it->second.train_id_ != train.train_id_) {
+    if (it->second.train_id_ != train.train_id_ || it->second.offset_ != offset) {
       ++it;
       continue;
     }
@@ -253,8 +262,10 @@ void TrainManager::Clear() {
   station_map_.Clear();
 }
 
-int TrainManager::GetOffset(const Train &train, const Date &date, int id) {
-  if (Date::Diff(train.end_date_ + train.leave_[id], date).day_ < 0) {
+int TrainManager::GetOffset(const Train &train, const Date &date, int id, bool must_in_same_day) {
+  if ((must_in_same_day && (Date::CompareByDay()(date, train.begin_date_ + train.leave_[id]) ||
+                            Date::CompareByDay()(train.end_date_ + train.leave_[id], date))) ||
+      (!must_in_same_day && Date::CompareByTime()(train.end_date_ + train.leave_[id], date))) {
     return -1;
   }
   Time diff = Date::Diff(date, train.begin_date_ + train.leave_[id]);
@@ -282,9 +293,10 @@ int TrainManager::GetSeatNum(const train_id_t &train_id, int offset, int from_id
   return *MinElement(buffer + from_id, buffer + to_id);
 }
 
-TicketInfo TrainManager::GetFirstTicket(const Train &train, const Date &date, int from_id, int to_id) {
+TicketInfo
+TrainManager::GetFirstTicket(const Train &train, const Date &date, int from_id, int to_id, bool must_in_same_day) {
   int price = train.price_[to_id] - train.price_[from_id];
-  int offset = GetOffset(train, date, from_id);
+  int offset = GetOffset(train, date, from_id, must_in_same_day);
   if (offset == -1) {
     return TicketInfo();
   }
