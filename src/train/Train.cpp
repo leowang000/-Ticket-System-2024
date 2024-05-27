@@ -217,8 +217,11 @@ TrainManager::BuyTicket(int time, const train_id_t &train_id, const Date &date, 
   static Train train;
   HashType train_hash = train_id.GetHash();
   train_file_.Read(train, train_map_.Find(train_hash).front());
-  int from_id, to_id;
+  int from_id = -1, to_id = -1;
   GetFromAndToId(train, from, to, from_id, to_id);
+  if (from_id == -1 || to_id == -1) {
+    return Order();
+  }
   int offset = GetOffset(train, date, from_id);
   if (offset == -1) {
     return Order();

@@ -44,7 +44,7 @@ void ClearFiles() {
 
 int main() {
   //ClearFiles();
-  //freopen("../testcases/7.in","r", stdin);
+  //freopen("../testcases/33.in","r", stdin);
   //freopen("output.txt", "w", stdout);
   std::ios::sync_with_stdio(false);
   std::cin.tie(nullptr);
@@ -56,7 +56,6 @@ int main() {
     if (ticket_system.ExecuteInstruction()) {
       return 0;
     }
-    std::cout << std::flush;
   }
   return 0;
 }

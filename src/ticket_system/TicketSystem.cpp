@@ -87,6 +87,9 @@ bool TicketSystem::GetInstruction() {
 }
 
 bool TicketSystem::ExecuteInstruction() {
+  std::fstream fs("tmp.txt", std::ios::app);
+  fs << param_.time_ << std::endl;
+  fs.close();
   std::cout << "[" + std::to_string(param_.time_) + "] ";
   switch (instruction_type_) {
     case kAddUser: {
@@ -298,6 +301,10 @@ bool TicketSystem::ExecuteInstruction() {
       break;
     }
     case kBuyTicket: {
+      if (param_.time_ == 133324) {
+        int stop;
+        stop = 0;
+      }
       if (param_['q'].empty()) {
         param_['q'] = "false";
       }
