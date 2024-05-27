@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 include_directories(src)
 include_directories(utility)
 
-add_executable(ticket_system
+add_executable(code
         src/main.cpp
         src/ticket_system/TicketSystem.cpp
         src/account/Accounts.cpp
