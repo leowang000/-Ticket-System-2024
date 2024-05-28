@@ -23,10 +23,6 @@ Time Time::operator-(const Time &rhs) const {
   return Time(GetMinutes() - rhs.GetMinutes());
 }
 
-constexpr int Time::GetMinutes() const {
-  return 1440 * day_ + 60 * hour_ + min_;
-}
-
 bool Date::CompareByDay::operator()(const Date &lhs, const Date &rhs) const {
   return lhs.m_ < rhs.m_ || (lhs.m_ == rhs.m_ && lhs.d_ < rhs.d_);
 }

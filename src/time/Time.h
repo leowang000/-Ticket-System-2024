@@ -11,7 +11,9 @@ struct Time {
 
   Time operator+(const Time &rhs) const;
   Time operator-(const Time &rhs) const;
-  constexpr int GetMinutes() const;
+  constexpr int GetMinutes() const {
+    return 1440 * day_ + 60 * hour_ + min_;
+  }
 
   int day_, hour_, min_;
 };
