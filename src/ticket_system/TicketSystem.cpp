@@ -87,9 +87,6 @@ bool TicketSystem::GetInstruction() {
 }
 
 bool TicketSystem::ExecuteInstruction() {
-//  std::fstream fs("tmp.txt", std::ios::app);
-//  fs << param_.time_ << std::endl;
-//  fs.close();
   std::cout << "[" + std::to_string(param_.time_) + "] ";
   switch (instruction_type_) {
     case kAddUser: {

@@ -3,6 +3,8 @@ project(ticket_system)
 
 set(CMAKE_CXX_STANDARD 17)
 
+add_compile_options(-Ofast)
+
 include_directories(src)
 include_directories(utility)
 
