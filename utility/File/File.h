@@ -61,7 +61,7 @@ class Storage {
   void Clear();
 
  private:
-  static constexpr int BufferPoolSize = 512;
+  static constexpr int BufferPoolSize = 384;
   FileWithInt<T, len> data_file_;
   FileWithInt<int> trash_file_;
   LRU<T, len> *buffer;

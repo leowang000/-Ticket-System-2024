@@ -214,6 +214,9 @@ TrainManager::BuyTicket(int time, const train_id_t &train_id, const Date &date, 
   static Train train;
   HashType train_hash = train_id.GetHash();
   train_file_.Read(train, train_map_.Find(train_hash).front());
+  if (num > train.seat_num_) {
+    return Order();
+  }
   int from_id = -1, to_id = -1;
   GetFromAndToId(train, from, to, from_id, to_id);
   if (from_id == -1 || to_id == -1) {
